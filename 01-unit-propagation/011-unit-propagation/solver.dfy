@@ -25,8 +25,7 @@ class SATSolver {
     requires formula.getLiteralValue(formula.truthAssignment[..], literal) == -1;
 
     modifies formula.truthAssignment, formula.stack, formula.stack.stack,
-             formula.trueLiteralsCount, formula.falseLiteralsCount, 
-             formula.satisfiedClauses;
+             formula.trueLiteralsCount, formula.falseLiteralsCount;
 
     ensures old(formula) == formula;
     ensures formula.valid();
@@ -89,8 +88,7 @@ class SATSolver {
       |formula.stack.stack[formula.stack.size-1]| > 0;
 
     modifies formula.truthAssignment, formula.stack, formula.stack.stack,
-             formula.trueLiteralsCount, formula.falseLiteralsCount, 
-             formula.satisfiedClauses;
+             formula.trueLiteralsCount, formula.falseLiteralsCount;
 
     ensures formula.valid();
     ensures old(formula.stack) == formula.stack;

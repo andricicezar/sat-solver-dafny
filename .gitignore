@@ -2,9 +2,7 @@
 *.dll
 *.dot
 *.mdb
-!System.Collections.Immutable.dll
-!System.Runtime.dll
 .vscode
-main.cs
 *.log
 *.smt2
+!csharp-equivalet/.vscode

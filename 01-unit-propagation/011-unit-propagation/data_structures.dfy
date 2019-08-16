@@ -9,11 +9,8 @@ trait DataStructures {
   var stack : Stack;
   var truthAssignment : array<int>; // from 0 to variablesCount - 1, values: -1, 0, 1
 
-  var satisfiedClauses: array<bool>; // from 0 to |clauses| - 1
-
   var trueLiteralsCount : array<int>; // from 0 to |clauses| - 1
   var falseLiteralsCount : array<int>; // from 0 to |clauses| - 1
-  var literalsCount : array<int>; // from 0 to |clauses| - 1
 
   var positiveLiteralsToClauses : array<seq<int>>; // from 0 to variablesCount - 1
   var negativeLiteralsToClauses : array<seq<int>>; // frm 0 to variablesCount - 1
@@ -98,17 +95,6 @@ trait DataStructures {
 
     (forall i :: 0 <= i < truthAssignment.Length && truthAssignment[i] == -1 ==>
       (i, false) !in stack.contents && (i, true) !in stack.contents)
-  }
-
-  predicate validSatisfiedClauses(truthAssignment : seq<int>)
-    reads this, stack, stack.stack, satisfiedClauses;
-    requires validVariablesCount();
-    requires validClauses();
-    requires validValuesTruthAssignment(truthAssignment);
-  {
-    satisfiedClauses.Length == |clauses| &&
-    forall i :: 0 <= i < satisfiedClauses.Length ==>
-      satisfiedClauses[i] == isClauseSatisfied(truthAssignment, i)  
   }
 
   predicate isClauseSatisfied(truthAssignment : seq<int>, clauseIndex : int) 
@@ -286,16 +272,6 @@ trait DataStructures {
               getLiteralValue(truthAssignment, literal) == -1;
   }
 
-  predicate validLiteralsCount()
-    reads this, literalsCount;
-    requires validVariablesCount();
-    requires validClauses();
-  {
-    literalsCount.Length == |clauses| &&
-    forall i :: 0 <= i < |clauses| ==>
-      literalsCount[i] == |clauses[i]|
-  }
-
   predicate validPositiveLiteralsToClauses()
     reads this, positiveLiteralsToClauses;
 
@@ -362,20 +338,17 @@ trait DataStructures {
 
   predicate validReferences()
     reads this, truthAssignment, trueLiteralsCount, falseLiteralsCount,
-          literalsCount, positiveLiteralsToClauses, negativeLiteralsToClauses;
+          positiveLiteralsToClauses, negativeLiteralsToClauses;
   {
     (truthAssignment != trueLiteralsCount) &&
     (truthAssignment != falseLiteralsCount) &&
-    (truthAssignment != literalsCount) &&
     (trueLiteralsCount != falseLiteralsCount) &&
-    (trueLiteralsCount != literalsCount) &&
-    (falseLiteralsCount != literalsCount) &&
     (positiveLiteralsToClauses != negativeLiteralsToClauses)
   }
 
   predicate valid() 
     reads this, stack, stack.stack, truthAssignment, trueLiteralsCount, 
-          falseLiteralsCount, literalsCount, satisfiedClauses, 
+          falseLiteralsCount,
           positiveLiteralsToClauses, negativeLiteralsToClauses;
   {
     validReferences() &&
@@ -384,11 +357,8 @@ trait DataStructures {
     validStack() &&
     validTruthAssignment() &&
 
-    validSatisfiedClauses(truthAssignment[..]) &&
-
     validTrueLiteralsCount(truthAssignment[..]) &&
     validFalseLiteralsCount(truthAssignment[..]) &&
-    validLiteralsCount() &&
 
     validPositiveLiteralsToClauses() &&
     validNegativeLiteralsToClauses()
@@ -834,7 +804,7 @@ trait DataStructures {
   lemma notDone_literalsToSet(i : int)
     requires valid();
     requires 0 <= i < |clauses|;
-    requires falseLiteralsCount[i] < literalsCount[i];
+    requires falseLiteralsCount[i] < |clauses[i]|;
     requires trueLiteralsCount[i] == 0;
     requires validClause(clauses[i]);
     requires forall literal :: literal in clauses[i] ==> validLiteral(literal);
@@ -853,7 +823,7 @@ trait DataStructures {
       var k := |clause|-1;
 
       while (k > 0)
-        invariant 0 <= k < |clause| == literalsCount[i];
+        invariant 0 <= k < |clause| == |clauses[i]|;
         invariant countFalseLiterals(truthAssignment[..], clause[k..]) == |clause| - k;
         decreases k;
       {
@@ -861,7 +831,7 @@ trait DataStructures {
         k := k - 1;
       }
 
-      assert countFalseLiterals(truthAssignment[..], clause) == literalsCount[i];
+      assert countFalseLiterals(truthAssignment[..], clause) == |clauses[i]|;
       assert false;
     }
   }

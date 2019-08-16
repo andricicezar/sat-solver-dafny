@@ -18,16 +18,14 @@ class Formula extends DataStructures {
                 clause[x] < clause[y];
 
     ensures valid();
+    ensures stack.size == 0;
     ensures fresh(stack);
     ensures fresh(stack.stack);
     ensures fresh(truthAssignment);
     ensures fresh(trueLiteralsCount);
     ensures fresh(falseLiteralsCount);
-    ensures fresh(literalsCount);
-    ensures fresh(satisfiedClauses);
     ensures fresh(positiveLiteralsToClauses);
     ensures fresh(negativeLiteralsToClauses);
-    ensures stack.size == 0;
   {
     this.variablesCount := variablesCount;
     this.clauses := clauses;
@@ -48,10 +46,6 @@ class Formula extends DataStructures {
 
     this.trueLiteralsCount := new int[|this.clauses|];
     this.falseLiteralsCount := new int[|this.clauses|];
-    this.literalsCount := new int[|this.clauses|];
-
-    this.satisfiedClauses := new bool[|clauses|];
-    ghost var satisfiedClauses' := satisfiedClauses[..];
 
     positiveLiteralsToClauses := new seq<int>[variablesCount];
     negativeLiteralsToClauses := new seq<int>[variablesCount];
@@ -61,7 +55,6 @@ class Formula extends DataStructures {
     this.createTFLArrays();
     ghost var trueLiteralsCount' := trueLiteralsCount[..];
     ghost var falseLiteralsCount' := falseLiteralsCount[..];
-    ghost var literalsCount' := literalsCount[..];
 
     assert validClauses();
     this.createPositiveLiteralsToClauses();
@@ -80,15 +73,10 @@ class Formula extends DataStructures {
     assert forall x :: 0 <= x < truthAssignment.Length ==> truthAssignment[x] == -1;
     assert forall x :: 0 <= x < stack.stack.Length ==> |stack.stack[x]| == 0;
     assert validTruthAssignment();
-    assert satisfiedClauses' == satisfiedClauses[..];
-    assert satisfiedClauses.Length == |clauses|;
-    this.createSatisfiedClausesArray();
-
 
     assert truthAssignment[..] == truthAssignment';
     assert trueLiteralsCount[..] == trueLiteralsCount';
     assert falseLiteralsCount[..] == falseLiteralsCount';
-    assert literalsCount[..] == literalsCount';
     assert positiveLiteralsToClauses[..] == positiveLiteralsToClauses';
     assert negativeLiteralsToClauses[..] == negativeLiteralsToClauses';
   }
@@ -100,16 +88,14 @@ class Formula extends DataStructures {
     requires validTruthAssignment();
     requires validClauses();
 
-    requires literalsCount.Length == |clauses|;
     requires trueLiteralsCount.Length == |clauses|;
     requires falseLiteralsCount.Length == |clauses|;
 
     requires forall value :: 0 <= value < truthAssignment.Length ==>
                 truthAssignment[value] == -1;
 
-    modifies trueLiteralsCount, falseLiteralsCount, literalsCount;
+    modifies trueLiteralsCount, falseLiteralsCount;
 
-    ensures validLiteralsCount();
     ensures validTrueLiteralsCount(truthAssignment[..]);
     ensures validFalseLiteralsCount(truthAssignment[..]);
   {
@@ -117,20 +103,16 @@ class Formula extends DataStructures {
 
     while (i < |clauses|)
       invariant 0 <= i <= |clauses|;
-      invariant forall j :: 0 <= j < i ==> literalsCount[j] == |clauses[j]|;
       invariant forall j :: 0 <= j < i ==> trueLiteralsCount[j] == countTrueLiterals(truthAssignment[..], clauses[j]);
       invariant forall j :: 0 <= j < i ==> falseLiteralsCount[j] == countFalseLiterals(truthAssignment[..], clauses[j]);
 
       decreases |clauses| - i;
     {
-      literalsCount[i] := |clauses[i]|;
-
       prop_countTrueLiterals_initialTruthAssignment(truthAssignment[..], clauses[i]);
       trueLiteralsCount[i] := 0;
 
       prop_countFalseLiterals_initialTruthAssignment(truthAssignment[..], clauses[i]);
       falseLiteralsCount[i] := 0;
-
 
       i := i + 1;
     }
@@ -249,38 +231,36 @@ class Formula extends DataStructures {
   }
 
   function method isUnitClause(index : int) : bool
-    reads this, stack, stack.stack, truthAssignment, trueLiteralsCount, literalsCount,
+    reads this, stack, stack.stack, truthAssignment, trueLiteralsCount,
           falseLiteralsCount;
     
     requires validVariablesCount();
     requires validStack();
     requires validTruthAssignment();
     requires validClauses();
-    requires validLiteralsCount();
     requires validTrueLiteralsCount(truthAssignment[..]);
     requires validFalseLiteralsCount(truthAssignment[..]);
 
     requires 0 <= index < |clauses|;
   {
     trueLiteralsCount[index] == 0 &&
-    literalsCount[index] - falseLiteralsCount[index] == 1
+    |clauses[index]| - falseLiteralsCount[index] == 1
   }
 
   function method isEmptyClause(index : int) : bool
-    reads this, stack, stack.stack, truthAssignment, trueLiteralsCount, literalsCount,
+    reads this, stack, stack.stack, truthAssignment, trueLiteralsCount,
           falseLiteralsCount;
     
     requires validVariablesCount();
     requires validStack();
     requires validTruthAssignment();
     requires validClauses();
-    requires validLiteralsCount();
     requires validTrueLiteralsCount(truthAssignment[..]);
     requires validFalseLiteralsCount(truthAssignment[..]);
 
     requires 0 <= index < |clauses|;
   {
-    literalsCount[index] == falseLiteralsCount[index]
+    |clauses[index]| == falseLiteralsCount[index]
   }
 
   method createPositiveLiteralsToClauses()
@@ -388,39 +368,6 @@ class Formula extends DataStructures {
     }
   }
 
-  method createSatisfiedClausesArray()
-    requires validReferences();
-    requires validVariablesCount();
-    requires validClauses();
-    requires validStack();
-    requires validTruthAssignment();
-    requires satisfiedClauses.Length == |clauses|;
-    requires forall value :: 0 <= value < truthAssignment.Length ==>
-                truthAssignment[value] == -1;
-
-    modifies satisfiedClauses;
-
-    ensures validSatisfiedClauses(truthAssignment[..]);
-  {
-    var i := 0;
-
-    while (i < |clauses|)
-      invariant 0 <= i <= |clauses|;
-      invariant forall j :: 0 <= j < i ==> 
-        satisfiedClauses[j] == isClauseSatisfied(truthAssignment[..], j);
-      decreases |clauses| - i;
-    {
-      assert validClause(clauses[i]);
-      assert forall value :: 0 <= value < truthAssignment.Length ==>
-                truthAssignment[value] == -1;
-      assert forall literal :: literal in clauses[i] ==>
-              getLiteralValue(truthAssignment[..], literal) == -1;
-      assert isClauseSatisfied(truthAssignment[..], i) == false;
-      satisfiedClauses[i] := false;
-      i := i + 1;
-    }
-  }
-
   method newLayerOnStack() 
     requires valid();
     requires 0 <= stack.size < stack.stack.Length;
@@ -448,7 +395,7 @@ class Formula extends DataStructures {
     requires |stack.stack[stack.size-1]| > 0;
 
     modifies truthAssignment, stack, stack.stack, trueLiteralsCount,
-             falseLiteralsCount, satisfiedClauses;
+             falseLiteralsCount;
 
     ensures valid();
     ensures stack.size == old(stack.size) - 1;
@@ -477,7 +424,7 @@ class Formula extends DataStructures {
 
     while (k < |layer|) 
       modifies stack, truthAssignment, trueLiteralsCount, 
-               falseLiteralsCount, satisfiedClauses;
+               falseLiteralsCount;
 
       invariant 0 <= k <= |layer|;
       invariant forall k' :: 0 <= k' < k ==> layer[k'] !in stack.contents;
@@ -516,9 +463,6 @@ class Formula extends DataStructures {
 
       invariant forall cI :: 0 <= cI < |clauses| ==>
         falseLiteralsCount[cI] == countFalseLiterals(truthAssignment[..], clauses[cI]);
-
-      invariant forall cI :: 0 <= cI < |clauses| ==>
-        satisfiedClauses[cI] == isClauseSatisfied(truthAssignment[..], cI);
 
       decreases |layer| - k;
     {
@@ -560,7 +504,7 @@ class Formula extends DataStructures {
 
       var i := 0;
       while (i < |positivelyImpactedClauses|)
-        modifies trueLiteralsCount, satisfiedClauses;
+        modifies trueLiteralsCount;
 
         invariant 0 <= i <= |positivelyImpactedClauses|;
         /* invariant trueLiteralsCount.Length == |clauses|;*/
@@ -576,18 +520,6 @@ class Formula extends DataStructures {
         invariant forall i' :: i <= i' < |positivelyImpactedClauses| ==>
           trueLiteralsCount[positivelyImpactedClauses[i']]
             == countTrueLiterals(previousTau, clauses[positivelyImpactedClauses[i']]);
-
-        invariant forall i' :: 0 <= i' < |clauses| && i' !in positivelyImpactedClauses ==>
-          satisfiedClauses[i']
-            == isClauseSatisfied(newTau, i');
-
-        invariant forall i' :: 0 <= i' < i ==>
-          satisfiedClauses[positivelyImpactedClauses[i']]
-            == isClauseSatisfied(newTau, positivelyImpactedClauses[i']);
-
-        invariant forall i' :: i <= i' < |positivelyImpactedClauses| ==>
-          satisfiedClauses[positivelyImpactedClauses[i']]
-            == isClauseSatisfied(previousTau, positivelyImpactedClauses[i']);
       {
         var clauseIndex := positivelyImpactedClauses[i];
         var clause := clauses[clauseIndex];
@@ -596,12 +528,11 @@ class Formula extends DataStructures {
         unsetVariable_countTrueLiteralsDecreasesWithOne(previousTau, newTau, variable, clause);
         trueLiteralsCount[clauseIndex] := trueLiteralsCount[clauseIndex] - 1;
 
-        if (trueLiteralsCount[clauseIndex] == 0) {
-          countTrueLiterals0_noLiteralsTrue(newTau, clause);
-          satisfiedClauses[clauseIndex] := false;
-        } else {
-          countTrueLiteralsX_existsTrueLiteral(newTau, clause);
-        }
+        /* if (trueLiteralsCount[clauseIndex] == 0) {*/
+        /*   countTrueLiterals0_noLiteralsTrue(newTau, clause);*/
+        /* } else {*/
+        /*   countTrueLiteralsX_existsTrueLiteral(newTau, clause);*/
+        /* }*/
 
         i := i + 1;
       }
@@ -642,7 +573,7 @@ class Formula extends DataStructures {
     requires 0 < stack.size <= stack.stack.Length;
     
     modifies truthAssignment, stack, stack.stack, trueLiteralsCount, 
-             satisfiedClauses, falseLiteralsCount;
+             falseLiteralsCount;
 
     ensures valid();
     ensures value == false ==> truthAssignment[variable] == 0;
@@ -725,15 +656,12 @@ class Formula extends DataStructures {
     assert !value ==> validNegativeLiteralsToClause(variable, impactedClauses);
 
     while (i < |impactedClauses|)
-      modifies trueLiteralsCount, satisfiedClauses;
+      modifies trueLiteralsCount;
 
       invariant 0 <= i <= |impactedClauses|;
 
       invariant forall j :: 0 <= j < |clauses| && j !in impactedClauses
         ==> trueLiteralsCount[j] == countTrueLiterals(newTau, clauses[j]);
-
-      invariant forall cI :: 0 <= cI < |clauses| && cI !in impactedClauses ==>
-        satisfiedClauses[cI] == isClauseSatisfied(newTau, cI) == old(satisfiedClauses[cI]);
 
       invariant forall j :: 0 <= j < i ==>
         trueLiteralsCount[impactedClauses[j]] 
@@ -742,10 +670,6 @@ class Formula extends DataStructures {
       invariant forall j :: i <= j < |impactedClauses| ==>
         trueLiteralsCount[impactedClauses[j]]
           == countTrueLiterals(oldTau, clauses[impactedClauses[j]]);
-
-      invariant forall j :: 0 <= j < i ==>
-        satisfiedClauses[impactedClauses[j]] 
-          == isClauseSatisfied(newTau, impactedClauses[j]);
 
       decreases |impactedClauses| - i;
     {
@@ -759,7 +683,6 @@ class Formula extends DataStructures {
       );
 
       trueLiteralsCount[clauseIndex] := trueLiteralsCount[clauseIndex] + 1;
-      satisfiedClauses[clauseIndex] := true;
 
       assert trueLiteral in clauses[clauseIndex]
         && getLiteralValue(newTau, trueLiteral) == 1;
@@ -769,7 +692,6 @@ class Formula extends DataStructures {
     }
 
     assert validTrueLiteralsCount(newTau);
-    assert validSatisfiedClauses(newTau);
 
     /* toate clauzele care au negatia variabilei*/
     var i' := 0;
@@ -814,34 +736,32 @@ class Formula extends DataStructures {
     assert validClauses();
     assert validStack();
     assert validTruthAssignment();
-    assert validSatisfiedClauses(truthAssignment[..]);
     assert validTrueLiteralsCount(truthAssignment[..]);
     assert validFalseLiteralsCount(truthAssignment[..]);
-    assert validLiteralsCount();
     assert validPositiveLiteralsToClauses();
     assert validNegativeLiteralsToClauses();
   }
 
   function method hasEmptyClause() : bool
     reads this, stack, stack.stack, truthAssignment, trueLiteralsCount, 
-          falseLiteralsCount, literalsCount, satisfiedClauses, 
+          falseLiteralsCount, 
           positiveLiteralsToClauses, negativeLiteralsToClauses;
     requires valid();
     ensures hasEmptyClause() == true ==> 
       exists i :: 0 <= i < |clauses| 
-               && falseLiteralsCount[i] == literalsCount[i];
+               && falseLiteralsCount[i] == |clauses[i]|;
     ensures hasEmptyClause() == false ==>
       forall i :: 0 <= i < |clauses| ==>
-        falseLiteralsCount[i] < literalsCount[i];
+        falseLiteralsCount[i] < |clauses[i]|;
   {
-    if i : int :| 0 <= i < |clauses| && falseLiteralsCount[i] == literalsCount[i] 
+    if i : int :| 0 <= i < |clauses| && falseLiteralsCount[i] == |clauses[i]|
       then true
       else false
   }
 
   function method isEmpty() : bool
     reads this, stack, stack.stack, truthAssignment, trueLiteralsCount, 
-          falseLiteralsCount, literalsCount, satisfiedClauses, 
+          falseLiteralsCount, 
           positiveLiteralsToClauses, negativeLiteralsToClauses;
     requires valid();
     requires !hasEmptyClause();
@@ -900,7 +820,7 @@ class Formula extends DataStructures {
         var k := 0;
 
         assert forall k :: 0 <= k < |clauses| ==>
-          falseLiteralsCount[k] < literalsCount[k];
+          falseLiteralsCount[k] < |clauses[k]|;
 
         while (k < |clauses|)
           invariant 0 <= k <= |clauses|;
@@ -910,7 +830,7 @@ class Formula extends DataStructures {
           decreases |clauses| - k;
         {
           assert validClause(clauses[k]);
-          assert falseLiteralsCount[k] < literalsCount[k];
+          assert falseLiteralsCount[k] < |clauses[k]|;
 
           assert forall x :: x in clauses[k] ==>
             isVariableSet(truthAssignment[..], getVariableFromLiteral(x));
@@ -931,7 +851,7 @@ class Formula extends DataStructures {
     requires validClause(clauses[cI]);
     requires forall x :: x in clauses[cI] ==>
       isVariableSet(truthAssignment[..], getVariableFromLiteral(x));
-    requires falseLiteralsCount[cI] < literalsCount[cI];
+    requires falseLiteralsCount[cI] < |clauses[cI]|;
 
     ensures trueLiteralsCount[cI] > 0;
   {
@@ -942,8 +862,6 @@ class Formula extends DataStructures {
       getLiteralValue(tau, x) in [0, 1];
 
     if forall x :: x in clause ==> getLiteralValue(tau, x) == 0 {
-      /* assert falseLiteralsCount[cI] == literalsCount[cI];*/
-
       var k := |clause| - 1;
 
       while (k > 0)
@@ -956,7 +874,7 @@ class Formula extends DataStructures {
         k := k - 1;
       }
 
-      assert countFalseLiterals(tau, clause) == |clause| == literalsCount[cI];
+      assert countFalseLiterals(tau, clause) == |clause| == |clauses[cI]|;
     } else {
       assert exists x :: x in clause && getLiteralValue(tau, x) == 1;
       existsTrueLiteral_countTrueLiteralsPositive(clause, tau);
@@ -1004,7 +922,7 @@ class Formula extends DataStructures {
     requires 0 < stack.size <= stack.stack.Length;
 
     modifies truthAssignment, stack, stack.stack, trueLiteralsCount, 
-             falseLiteralsCount, satisfiedClauses;
+             falseLiteralsCount;
 
     ensures valid();
     ensures 0 < stack.size <= stack.stack.Length;
@@ -1072,7 +990,7 @@ class Formula extends DataStructures {
       assert validClause(clause);
 
       if (trueLiteralsCount[clauseIndex] == 0 &&
-        falseLiteralsCount[clauseIndex] + 1 == literalsCount[clauseIndex]) {
+        falseLiteralsCount[clauseIndex] + 1 == |clauses[clauseIndex]|) {
 
         unitClause_existsUnsetLiteral(clauseIndex);
 
@@ -1115,7 +1033,7 @@ class Formula extends DataStructures {
     requires 0 <= clauseIndex < |clauses|;
     requires validClause(clauses[clauseIndex]);
     requires trueLiteralsCount[clauseIndex] == 0;
-    requires falseLiteralsCount[clauseIndex] + 1 == literalsCount[clauseIndex];
+    requires falseLiteralsCount[clauseIndex] + 1 == |clauses[clauseIndex]|;
 
     ensures exists literal :: literal in clauses[clauseIndex]
                 && truthAssignment[getVariableFromLiteral(literal)] == -1;
@@ -1206,7 +1124,7 @@ class Formula extends DataStructures {
   {
     var tau := truthAssignment[..];
     var clauseIndex :| 0 <= clauseIndex < |clauses|
-               && falseLiteralsCount[clauseIndex] == literalsCount[clauseIndex];
+               && falseLiteralsCount[clauseIndex] == |clauses[clauseIndex]|;
     var clause := clauses[clauseIndex];
     assert validClause(clause);
     allLiteralsSetToFalse_clauseUnsatisfied(clauseIndex);
@@ -1225,7 +1143,7 @@ class Formula extends DataStructures {
   lemma allLiteralsSetToFalse_clauseUnsatisfied(clauseIndex : int) 
     requires valid();
     requires 0 <= clauseIndex < |clauses|;
-    requires falseLiteralsCount[clauseIndex] == literalsCount[clauseIndex];
+    requires falseLiteralsCount[clauseIndex] == |clauses[clauseIndex]|;
     requires validClause(clauses[clauseIndex]);
 
     ensures forall literal :: literal in clauses[clauseIndex] ==>
@@ -1380,12 +1298,11 @@ class Formula extends DataStructures {
     requires validValuesTruthAssignment(truthAssignment);
     requires validTrueLiteralsCount(truthAssignment);
     requires validFalseLiteralsCount(truthAssignment);
-    requires validLiteralsCount();
     requires 0 <= clauseIndex < |clauses|;
     requires validClause(clauses[clauseIndex]);
     requires validLiteral(literal);
     requires trueLiteralsCount[clauseIndex] == 0;
-    requires falseLiteralsCount[clauseIndex] + 1 == literalsCount[clauseIndex];
+    requires falseLiteralsCount[clauseIndex] + 1 == |clauses[clauseIndex]|;
     requires truthAssignment[getVariableFromLiteral(literal)] == -1;
     requires literal in clauses[clauseIndex];
     

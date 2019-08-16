@@ -34,6 +34,7 @@ class Stack {
     ensures this.variablesCount == varCount;
     ensures this.contents == {};
     ensures forall x :: 0 <= x < stack.Length ==> |stack[x]| == 0;
+    ensures size == 0;
     ensures fresh(stack);
   {
     this.size := 0;
