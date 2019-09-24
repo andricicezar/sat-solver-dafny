@@ -13,8 +13,8 @@ of RAM, Operating System 5.1.14-arch1-1-ARCH.
 
 | File | Language | Description | Time |
 |---|---|---|---|
-| dafny-perm.dfy |  Dafny | The code extracted in C# uses the native type `int` instead of `BigInteger` | 3.58s |
-| csharp-perm.cs |  C# |   | 3.62s |
+| dafny-perm.dfy |  Dafny | The code extracted in C# uses the native type `int` instead of `BigInteger` | 3.26s |
+| csharp-perm.cs |  C# |   | 3.31s |
 | fstar_perm.fst | F\* |   | 2.93s |
 | fstar_perm.fst | F\* | Compiled the extracted C code with the extra flag `-O3` | 1.64s |
 | fstar_perm.fst | F\* | We manually changed the dynamic allocation of memory with static allocation, and used `-O3`  | 0.79s |
@@ -49,7 +49,7 @@ csc version: 3.100.19.26603 (9d80dea7)
 
 ```
 dafny /noVerify /compile:2 /spillTargetCode:1 dafny-perm.dfy  // extracts the code in C#
-csc dafny-perm.cs /r:System.Numerics.dll
+csc -optimize+ dafny-perm.cs /r:System.Numerics.dll
 time ./dafny-perm.cs 
 ```
 
@@ -67,7 +67,7 @@ time ./permfst.exe
 csc version: 3.100.19.26603 (9d80dea7)
 
 ```
-csc csharp-perm.cs
+csc -optimize+ csharp-perm.cs
 time ./csharp-perm.exe
 ```
 
