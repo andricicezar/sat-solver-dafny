@@ -13,8 +13,9 @@ of RAM, Operating System 5.1.14-arch1-1-ARCH.
 
 | File | Language | Description | Time |
 |---|---|---|---|
-| dafny-perm.dfy |  Dafny | The code extracted in C# uses the native type `int` instead of `BigInteger` | 3.26s |
-| csharp-perm.cs |  C# |   | 3.31s |
+| dafny-perm.dfy |  Dafny | The code extracted in C# uses `BigInteger` | 51.15s |
+| dafny-perm.dfy |  Dafny | The code extracted in C# uses the machine type `int` instead of `BigInteger` | 3.26s |
+| csharp-perm.cs |  C# | Implemented using `int` | 3.31s |
 | fstar_perm.fst | F\* |   | 2.93s |
 | fstar_perm.fst | F\* | Compiled the extracted C code with the extra flag `-O3` | 0.61s |
 | gcc-perm.c | C |   | 3.09s |
@@ -34,8 +35,7 @@ is compiled using `-O3`, the difference gets bigger in this example.
 
 
 ## Commands used to test
-
-### 1. Dafny extracted to C# with int
+### 1. Dafny extracted to C# (with BigInteger or int)
 Dafny version: 2.3.0.10506
 
 csc version: 3.100.19.26603 (9d80dea7)
