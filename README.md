@@ -1,3 +1,5 @@
+# There is a new version of this project here: [TrueSAT](https://github.com/andricicezar/truesat).
+
 Verified implementation in Dafny of the DPLL algorithm.
 
 ### Requirements
